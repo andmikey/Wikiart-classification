@@ -1,17 +1,19 @@
-import sys
+import argparse
+import json
 import os
+import sys
+
+import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
-from torch.utils.data import Dataset, DataLoader
-from torchvision.io import read_image
-import matplotlib.pyplot as plt
-import torchvision.transforms.functional as F
-from torch.optim import Adam
-import tqdm
-from wikiart import WikiArtDataset, WikiArtModel
 import torcheval.metrics as metrics
-import json
-import argparse
+import torchvision.transforms.functional as F
+import tqdm
+from torch.optim import Adam
+from torch.utils.data import DataLoader, Dataset
+from torchvision.io import read_image
+
+from wikiart import WikiArtDataset, WikiArtModel
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-c", "--config", help="configuration file", default="config.json")
@@ -26,8 +28,9 @@ device = config["device"]
 
 print("Running...")
 
-#traindataset = WikiArtDataset(trainingdir, device)
+# traindataset = WikiArtDataset(trainingdir, device)
 testingdataset = WikiArtDataset(testingdir, device)
+
 
 def test(modelfile=None, device="cpu"):
     loader = DataLoader(testingdataset, batch_size=1)
@@ -46,8 +49,8 @@ def test(modelfile=None, device="cpu"):
         predictions.append(torch.argmax(output).unsqueeze(dim=0))
         truth.append(y)
 
-    #print("predictions {}".format(predictions))
-    #print("truth {}".format(truth))
+    # print("predictions {}".format(predictions))
+    # print("truth {}".format(truth))
     predictions = torch.concat(predictions)
     truth = torch.concat(truth)
     metric = metrics.MulticlassAccuracy()
@@ -56,5 +59,6 @@ def test(modelfile=None, device="cpu"):
     confusion = metrics.MulticlassConfusionMatrix(27)
     confusion.update(predictions, truth)
     print("Confusion Matrix\n{}".format(confusion.compute()))
-    
+
+
 test(modelfile=config["modelfile"], device=device)

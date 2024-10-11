@@ -1,16 +1,18 @@
-import sys
+import argparse
+import json
 import os
+import sys
+
+import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
-from torch.utils.data import Dataset, DataLoader
-from torchvision.io import read_image
-import matplotlib.pyplot as plt
 import torchvision.transforms.functional as F
-from torch.optim import Adam
 import tqdm
+from torch.optim import Adam
+from torch.utils.data import DataLoader, Dataset
+from torchvision.io import read_image
+
 from wikiart import WikiArtDataset, WikiArtModel
-import json
-import argparse
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-c", "--config", help="configuration file", default="config.json")
@@ -27,7 +29,7 @@ print("Running...")
 
 
 traindataset = WikiArtDataset(trainingdir, device)
-#testingdataset = WikiArtDataset(testingdir, device)
+# testingdataset = WikiArtDataset(testingdir, device)
 
 print(traindataset.imgdir)
 
@@ -45,7 +47,7 @@ def train(epochs=3, batch_size=32, modelfile=None, device="cpu"):
     model = WikiArtModel().to(device)
     optimizer = Adam(model.parameters(), lr=0.01)
     criterion = nn.NLLLoss().to(device)
-    
+
     for epoch in range(epochs):
         print("Starting epoch {}".format(epoch))
         accumulate_loss = 0
@@ -66,4 +68,7 @@ def train(epochs=3, batch_size=32, modelfile=None, device="cpu"):
 
     return model
 
-model = train(config["epochs"], config["batch_size"], modelfile=config["modelfile"], device=device)
+
+model = train(
+    config["epochs"], config["batch_size"], modelfile=config["modelfile"], device=device
+)
