@@ -1,17 +1,10 @@
 import argparse
 import json
-import os
-import sys
 
-import matplotlib.pyplot as plt
 import torch
-import torch.nn as nn
 import torcheval.metrics as metrics
-import torchvision.transforms.functional as F
 import tqdm
-from torch.optim import Adam
-from torch.utils.data import DataLoader, Dataset
-from torchvision.io import read_image
+from torch.utils.data import DataLoader
 
 from wikiart import WikiArtDataset, WikiArtModel
 
@@ -28,7 +21,6 @@ device = config["device"]
 
 print("Running...")
 
-# traindataset = WikiArtDataset(trainingdir, device)
 testingdataset = WikiArtDataset(testingdir, device)
 
 

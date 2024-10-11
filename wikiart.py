@@ -1,13 +1,8 @@
 import os
-import sys
 
-import matplotlib.pyplot as plt
-import torch
 import torch.nn as nn
 import torchvision.transforms.functional as F
-import tqdm
-from torch.optim import Adam
-from torch.utils.data import DataLoader, Dataset
+from torch.utils.data import Dataset
 from torchvision.io import read_image
 
 
@@ -35,16 +30,13 @@ class WikiArtDataset(Dataset):
         filedict = {}
         indices = []
         classes = set()
-        print("Gathering files for {}".format(imgdir))
         for item in walking:
-            sys.stdout.write(".")
             arttype = os.path.basename(item[0])
             artfiles = item[2]
             for art in artfiles:
                 filedict[art] = WikiArtImage(imgdir, arttype, art)
                 indices.append(art)
                 classes.add(arttype)
-        print("...finished")
         self.filedict = filedict
         self.imgdir = imgdir
         self.indices = indices
@@ -79,12 +71,9 @@ class WikiArtModel(nn.Module):
 
     def forward(self, image):
         output = self.conv2d(image)
-        # print("convout {}".format(output.size()))
         output = self.maxpool2d(output)
-        # print("poolout {}".format(output.size()))
         output = self.flatten(output)
         output = self.batchnorm1d(output)
-        # print("poolout {}".format(output.size()))
         output = self.linear1(output)
         output = self.dropout(output)
         output = self.relu(output)
