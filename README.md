@@ -1,5 +1,7 @@
 # WikiArt classification 
 
+Starting repository: https://github.com/asayeed/lt2326-h24-wa_modeling
+
 ## Assignment
 ### Bonus A - Make the in-class example actually learn something (5 points)
 
@@ -146,4 +148,6 @@ In this part, you're going to write another script that augments the autoencoder
 
 Write a script to fine-tune an existing pre-trained model from HuggingFace so that it generates art in the styles in the WikiArt dataset.  You can use LoRA to make it more compressed and efficient (the tools for LoRA should be installed on the mltgpu machines).  You might need mltgpu-2 for this, depending on how you implement it.  Document what you did in the report and subjective impressions of the generation quality.
 
-- Think about this - want to get to this level as a priority
+- Instructions on fine-tuning a pretrained model: https://huggingface.co/docs/transformers/en/training
+- What kind of model to fine-tune?
+    - Text-to-image probably makes sense, prompt using the class: https://huggingface.co/models?pipeline_tag=text-to-image&sort=trending

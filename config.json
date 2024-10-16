@@ -1,8 +1,18 @@
 {
-    "modelfile": "wikiart.pth",
-    "trainingdir": "/scratch/lt2326-2926-h24/wikiart/train",
-    "testingdir": "/scratch/lt2326-2926-h24/wikiart/test",
-    "device": "cuda:0",
-    "epochs": 1,
-    "batch_size": 32
+    "model_train": {
+        "modelfile": "wikiart.pth",
+        "trainingdir": "/scratch/lt2326-2926-h24/wikiart/train",
+        "testingdir": "/scratch/lt2326-2926-h24/wikiart/test",
+        "device": "cuda:0",
+        "epochs": 1,
+        "batch_size": 32
+    },
+    "autoencoder": {
+        "modelfile": "wikiart_autoencoder.pth",
+        "trainingdir": "/scratch/lt2326-2926-h24/wikiart/train",
+        "testingdir": "/scratch/lt2326-2926-h24/wikiart/test",
+        "device": "cuda:0",
+        "epochs": 1,
+        "batch_size": 32
+    }
 }

@@ -145,11 +145,37 @@ class WikiArtModel(nn.Module):
         return self.softmax(output)
 
 
-# class WikiArtEncoderDecoder(nn.Module):
-#     def __init__(self):
+class WikiArtAutoencoder(nn.Module):
+    def __init__(self, input_dim):
+        super().__init__()
+        # TODO fix - this doesn't train. Suspect issue with dimensions.
 
-#         self.encoder = _
-#         self.decoder = _
+        # Placeholder architecture based on https://www.geeksforgeeks.org/implementing-an-autoencoder-in-pytorch/
+        # May improve this later
+        # Splitting into encoding/decoding like this means we can easily pull just the encoder once the model is trained
+        self.encoder = nn.Sequential(
+            nn.Linear(input_dim * input_dim, 128),
+            nn.ReLU(),
+            nn.Linear(128, 64),
+            nn.ReLU(),
+            nn.Linear(64, 36),
+            nn.ReLU(),
+            nn.Linear(36, 18),
+            nn.ReLU(),
+            nn.Linear(18, 9),
+        )
+        self.decoder = nn.Sequential(
+            nn.Linear(9, 18),
+            nn.ReLU(),
+            nn.Linear(18, 36),
+            nn.ReLU(),
+            nn.Linear(36, 64),
+            nn.ReLU(),
+            nn.Linear(64, 128),
+            nn.ReLU(),
+            nn.Linear(128, input_dim * input_dim),
+            nn.Sigmoid(),
+        )
 
-#     def forward(self, image):
-#         return self.decoder(self.encoder(image))
+    def forward(self, image):
+        return self.decoder(self.encoder(image))
