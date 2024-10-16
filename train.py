@@ -22,11 +22,6 @@ device = config["device"]
 
 traindataset = WikiArtDataset(trainingdir, device)
 
-print(traindataset.imgdir)
-
-the_image, the_label = traindataset[5]
-print(the_image, the_image.size())
-
 
 def train(epochs=3, batch_size=32, modelfile=None, device="cpu"):
     loader = DataLoader(traindataset, batch_size=batch_size, shuffle=True)

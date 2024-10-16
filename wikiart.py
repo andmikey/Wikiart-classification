@@ -102,8 +102,8 @@ class WikiArtDataset(Dataset):
         self.device = device
 
         # Print new class counts after resampling
-        for c in class_counts:
-            print(f"{class_counts[c]} {c}")
+        # for c in class_counts:
+        #     print(f"{class_counts[c]} {c}")
 
     def __len__(self):
         # Since we've resampled, use self.indices
