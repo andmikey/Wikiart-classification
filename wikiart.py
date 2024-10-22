@@ -146,36 +146,42 @@ class WikiArtModel(nn.Module):
 
 
 class WikiArtAutoencoder(nn.Module):
-    def __init__(self, input_dim):
+    def __init__(self):
         super().__init__()
-        # TODO fix - this doesn't train. Suspect issue with dimensions.
-
-        # Placeholder architecture based on https://www.geeksforgeeks.org/implementing-an-autoencoder-in-pytorch/
-        # May improve this later
         # Splitting into encoding/decoding like this means we can easily pull just the encoder once the model is trained
         self.encoder = nn.Sequential(
-            nn.Linear(input_dim * input_dim, 128),
-            nn.ReLU(),
-            nn.Linear(128, 64),
-            nn.ReLU(),
-            nn.Linear(64, 36),
-            nn.ReLU(),
-            nn.Linear(36, 18),
-            nn.ReLU(),
-            nn.Linear(18, 9),
-        )
+            nn.Conv2d(3, 3, kernel_size=5, stride=2),
+            nn.BatchNorm2d(3),
+            nn.Dropout2d(),
+            nn.Conv2d(3, 3, kernel_size=5, stride=2),
+            nn.BatchNorm2d(3),
+            nn.Dropout2d(),
+            nn.Conv2d(3, 3, kernel_size=5, stride=2),
+            nn.BatchNorm2d(3),
+            nn.Dropout2d(),
+            nn.Conv2d(3, 1, kernel_size=5, stride=2),
+            nn.BatchNorm2d(1),
+            nn.Dropout2d(),
+            nn.Conv2d(1, 1, kernel_size=5, stride=2),
+        )  # [batch_size, 1, 10, 10]
         self.decoder = nn.Sequential(
-            nn.Linear(9, 18),
-            nn.ReLU(),
-            nn.Linear(18, 36),
-            nn.ReLU(),
-            nn.Linear(36, 64),
-            nn.ReLU(),
-            nn.Linear(64, 128),
-            nn.ReLU(),
-            nn.Linear(128, input_dim * input_dim),
-            nn.Sigmoid(),
-        )
+            nn.ConvTranspose2d(1, 1, kernel_size=5, stride=2),
+            nn.Dropout2d(),
+            nn.BatchNorm2d(1),
+            nn.ConvTranspose2d(1, 3, kernel_size=5, stride=2),
+            nn.Dropout2d(),
+            nn.BatchNorm2d(3),
+            nn.ConvTranspose2d(3, 3, kernel_size=5, stride=2),
+            nn.Dropout2d(),
+            nn.BatchNorm2d(3),
+            # output_padding is needed to bring the image size back to [416, 416]
+            nn.ConvTranspose2d(3, 3, kernel_size=5, stride=2, output_padding=1),
+            nn.Dropout2d(),
+            nn.BatchNorm2d(3),
+            nn.ConvTranspose2d(3, 3, kernel_size=5, stride=2, output_padding=1),
+            nn.Dropout2d(),
+            nn.BatchNorm2d(3),
+        )  #  [batch_size, 3, 416, 416]
 
     def forward(self, image):
         return self.decoder(self.encoder(image))
