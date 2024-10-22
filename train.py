@@ -26,6 +26,7 @@ traindataset = WikiArtDataset(trainingdir, device)
 
 
 def train(epochs=3, batch_size=32, modelfile=None, device="cpu"):
+    print(f"Training model for {epochs} epochs, {batch_size} batch size")
     loader = DataLoader(traindataset, batch_size=batch_size, shuffle=True)
 
     model = WikiArtModel().to(device)

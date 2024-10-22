@@ -125,21 +125,29 @@ class WikiArtModel(nn.Module):
     def __init__(self, num_classes=27):
         super().__init__()
 
+        # Use this to get the art style embedding
         self.embedding = nn.Sequential(
+            nn.Conv2d(3, 3, (4, 4)),
+            nn.Dropout(0.01),
+            nn.ReLU(),
+            nn.Conv2d(3, 3, (4, 4)),
+            nn.Dropout(0.01),
+            nn.ReLU(),
             nn.Conv2d(3, 1, (4, 4), padding=2),
             nn.MaxPool2d((4, 4), padding=2),
             nn.Flatten(),
-            nn.BatchNorm1d(105 * 105),
-            nn.Linear(105 * 105, 300),
+            nn.BatchNorm1d(103 * 103),
+            nn.Linear(103 * 103, 300),
             nn.Dropout(0.01),
             nn.ReLU(),
-            nn.Linear(300, num_classes),
         )
 
-        self.softmax = nn.LogSoftmax(dim=1)
+        self.output_classes = nn.Sequential(
+            nn.Linear(300, num_classes), nn.LogSoftmax(dim=1)
+        )
 
     def forward(self, image):
-        return self.softmax(self.embedding(image))
+        return self.output_classes(self.embedding(image))
 
 
 class WikiArtAutoencoder(nn.Module):

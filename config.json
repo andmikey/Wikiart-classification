@@ -4,8 +4,8 @@
         "trainingdir": "/scratch/lt2326-2926-h24/wikiart/train",
         "testingdir": "/scratch/lt2326-2926-h24/wikiart/test",
         "device": "cuda:0",
-        "epochs": 50,
-        "batch_size": 32
+        "epochs": 25,
+        "batch_size": 64
     },
     "autoencoder": {
         "modelfile": "models/wikiart_autoencoder.pth",

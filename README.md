@@ -7,7 +7,12 @@ Starting repository: https://github.com/asayeed/lt2326-h24-wa_modeling
 
 Yes! We are actually starting with a bonus task! That is, you can skip this if you don't want to.  The in-class WikiArt demo did not actually learn the intended function.  As in, we got a maximum of 2% multiclass accuracy before convergence.  Update the model and architecture to see if you can get better performance.  If you get better than 5% accuracy, you can get the points on this task.  However, you are not allowed to use any pretrained models or transformers, just the basic PyTorch classes. You can copypaste your code from Assignment 1 too, it's OK!  Report on what you did and whether it worked.
 
-- I skipped this as I didn't feel it was a good use of my time.
+- Doing this on the *rebalanced* dataset 
+
+- Changed batch size to 64 and learning rate to 0.001, 20 epochs and I got accuracy: 0.08037383109331131
+- ... however, this changes run-by-run, it's not deterministic. Gives values anywhere in the range 2-6%. 
+
+Tried also adding two conv/dropout/relu layers
 
 ### Part 0 - Documentation (3 points)
 
@@ -140,6 +145,8 @@ In this part, you're going to write another script that augments the autoencoder
     - Train a style classifier on the (train) images. Take the last layer before the final output as the style embedding.
 - What do we do with style embeddings, once we have them?
     - Could concat together in an intermediate layer
+
+- Use 300-size style embeddings from the wikiart model train
 
 ### Bonus B - Generation but with a pre-trained model (10 points)
 
