@@ -70,7 +70,9 @@ class WikiArtDataset(Dataset):
         classes = set()
         class_counts = defaultdict(lambda: 0)
 
-        for item in walking:
+        # Run through the files in alphabetical order to ensure consistency between runs (os.walk is random order
+        # by default)
+        for item in sorted(walking):
             arttype = os.path.basename(item[0])  # Name of class
             if arttype in ["train", "test"]:
                 # Don't sample the train/test directories
@@ -123,26 +125,21 @@ class WikiArtModel(nn.Module):
     def __init__(self, num_classes=27):
         super().__init__()
 
-        self.conv2d = nn.Conv2d(3, 1, (4, 4), padding=2)
-        self.maxpool2d = nn.MaxPool2d((4, 4), padding=2)
-        self.flatten = nn.Flatten()
-        self.batchnorm1d = nn.BatchNorm1d(105 * 105)
-        self.linear1 = nn.Linear(105 * 105, 300)
-        self.dropout = nn.Dropout(0.01)
-        self.relu = nn.ReLU()
-        self.linear2 = nn.Linear(300, num_classes)
+        self.embedding = nn.Sequential(
+            nn.Conv2d(3, 1, (4, 4), padding=2),
+            nn.MaxPool2d((4, 4), padding=2),
+            nn.Flatten(),
+            nn.BatchNorm1d(105 * 105),
+            nn.Linear(105 * 105, 300),
+            nn.Dropout(0.01),
+            nn.ReLU(),
+            nn.Linear(300, num_classes),
+        )
+
         self.softmax = nn.LogSoftmax(dim=1)
 
     def forward(self, image):
-        output = self.conv2d(image)
-        output = self.maxpool2d(output)
-        output = self.flatten(output)
-        output = self.batchnorm1d(output)
-        output = self.linear1(output)
-        output = self.dropout(output)
-        output = self.relu(output)
-        output = self.linear2(output)
-        return self.softmax(output)
+        return self.softmax(self.embedding(image))
 
 
 class WikiArtAutoencoder(nn.Module):

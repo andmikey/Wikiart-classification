@@ -1,5 +1,6 @@
 import argparse
 import json
+from pathlib import Path
 
 import numpy as np
 import seaborn as sns
@@ -47,7 +48,7 @@ def train(traindataset, epochs=3, batch_size=32, device="cpu", save_dir=None):
     ax.set_xlabel("Epoch")
     ax.set_xticks([x for x in range(epochs)])
     ax.plot(loss_for_training)
-    fig.savefig(save_dir / "training_loss.png")
+    fig.savefig(save_dir / "embedding_model_training_loss.png")
 
     return model
 
@@ -116,7 +117,7 @@ def main():
             config["batch_size"],
             modelfile=config["modelfile"],
             device=device,
-            save_dir=config["save_dir"],
+            save_dir=Path(config["save_dir"]),
         )
 
         if config["modelfile"]:
