@@ -7,7 +7,7 @@ Starting repository: https://github.com/asayeed/lt2326-h24-wa_modeling
 
 Yes! We are actually starting with a bonus task! That is, you can skip this if you don't want to.  The in-class WikiArt demo did not actually learn the intended function.  As in, we got a maximum of 2% multiclass accuracy before convergence.  Update the model and architecture to see if you can get better performance.  If you get better than 5% accuracy, you can get the points on this task.  However, you are not allowed to use any pretrained models or transformers, just the basic PyTorch classes. You can copypaste your code from Assignment 1 too, it's OK!  Report on what you did and whether it worked.
 
-- Try using the MNIST CNN from assignment 1, but may need to adjust sizes
+- I skipped this as I didn't feel it was a good use of my time.
 
 ### Part 0 - Documentation (3 points)
 
@@ -129,11 +129,7 @@ We will do things other than classification in this task, so you should create a
 
 Document everything concisely.
 
-- Think about this piece - expect I'll need to watch some lectures / read some slides for this 
-    - Tensorflow has an example: https://www.tensorflow.org/tutorials/generative/autoencoder 
-    - Basically input -> encode -> output
-- Import sklearn and run clustering on it, grouped by class
-    - Representation = output of encoder - save this as model property, cache it step-by-step
+Need to install seaborn for this one. I did it with pip install --user. 
 
 ### Part 3 - Generation/style transfer (9 points)
 
@@ -141,8 +137,9 @@ In this part, you're going to write another script that augments the autoencoder
 
 - Pass art style *and* the input image
 - How do we get style embeddings?
-    - Mean of each style 
+    - Train a style classifier on the (train) images. Take the last layer before the final output as the style embedding.
 - What do we do with style embeddings, once we have them?
+    - Could concat together in an intermediate layer
 
 ### Bonus B - Generation but with a pre-trained model (10 points)
 
