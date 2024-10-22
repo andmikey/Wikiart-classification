@@ -14,6 +14,7 @@
         "device": "cuda:0",
         "epochs": 1,
         "batch_size": 32,
-        "embeddings_output_file": "images/embeddings.png"
+        "embeddings_output_file": "images/embeddings.png",
+        "additional_outputs_dir": "images/"
     }
 }

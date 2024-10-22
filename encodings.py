@@ -14,28 +14,40 @@ from torch.utils.data import DataLoader
 from wikiart import WikiArtAutoencoder, WikiArtDataset
 
 
-def train(traindataset, epochs=3, batch_size=32, device="cpu"):
+def train(traindataset, epochs=3, batch_size=32, device="cpu", save_dir=None):
     loader = DataLoader(traindataset, batch_size=batch_size, shuffle=True)
 
     model = WikiArtAutoencoder().to(device)
     optimizer = Adam(model.parameters(), lr=0.01)
     criterion = nn.MSELoss().to(device)
 
+    loss_for_training = []
+
     for epoch in range(epochs):
         print("Starting epoch {}".format(epoch))
-        accumulate_loss = 0
+        loss_at_step = []
         for _, batch in enumerate(tqdm.tqdm(loader)):
             X, cls = batch
             optimizer.zero_grad()
             output = model(X)
             # Loss is comparing generated image to actual image
             loss = criterion(output, X)
+            loss_at_step.append(loss.item())
             loss.backward()
-            accumulate_loss += loss
             optimizer.step()
 
-        # TODO should plot the epoch loss over time
-        print("In epoch {}, loss = {}".format(epoch, accumulate_loss))
+        epoch_loss = sum(loss_at_step) / len(loss_at_step)
+        loss_for_training.append(epoch_loss)
+        print(f"Mean loss for epoch {epoch} is {epoch_loss}")
+
+    # Plot training loss
+    fig, ax = plt.subplots()
+    ax.set_title(f"Training loss for {epochs} epochs")
+    ax.set_ylabel("Mean loss for epoch")
+    ax.set_xlabel("Epoch")
+    ax.set_xticks([x for x in range(epochs)])
+    ax.plot(loss_for_training)
+    fig.savefig(save_dir / "training_loss.png")
 
     return model
 
@@ -73,7 +85,7 @@ def plot_embeddings(model, testdataset, output_file):
     fig, ax = plt.subplots(figsize=(10, 10))
     sns.color_palette("mako")
     sns.scatterplot(x=X_fit[:, 0], y=X_fit[:, 1], hue=label_arr, ax=ax)
-    fig.savefig("out.png")
+    fig.savefig(output_file)
 
 
 def main():
@@ -104,6 +116,7 @@ def main():
             config["batch_size"],
             modelfile=config["modelfile"],
             device=device,
+            save_dir=config["save_dir"],
         )
 
         if config["modelfile"]:
