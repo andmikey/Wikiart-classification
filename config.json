@@ -3,8 +3,8 @@
         "modelfile": "models/wikiart.pth",
         "trainingdir": "/scratch/lt2326-2926-h24/wikiart/train",
         "testingdir": "/scratch/lt2326-2926-h24/wikiart/test",
-        "device": "cuda:0",
-        "epochs": 1,
+        "device": "cuda:1",
+        "epochs": 20,
         "batch_size": 64
     },
     "autoencoder": {
@@ -23,7 +23,7 @@
         "class_embeddings": "models/class_embeddings.pkl",
         "trainingdir": "/scratch/lt2326-2926-h24/wikiart/train",
         "testingdir": "/scratch/lt2326-2926-h24/wikiart/test",
-        "device": "cpu",
+        "device": "cpu", 
         "epochs": 20,
         "batch_size": 64,
         "additional_outputs_dir": "images/"

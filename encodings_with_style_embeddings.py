@@ -15,22 +15,23 @@ from torch.utils.data import DataLoader
 from wikiart import WikiArtAutoencoder, WikiArtDataset, WikiArtModel
 
 
-def generate_class_embeddings(model, traindataset, batch_size, device):
+def generate_class_embeddings(model, traindataset, batch_size, device="cpu"):
     train_loader = DataLoader(traindataset, batch_size=batch_size, shuffle=True)
 
+    # Track running sum of embeddings for each class
     embeddings_for_cls = defaultdict(lambda: torch.zeros(100).to(device))
+    # Track how many times we've seen each class
     cls_ct = defaultdict(lambda: 0)
 
     for _, batch in enumerate(train_loader):
-        # This bit gets OOM issues if run on GPU, works fine on CPU
-        # Haven't been able to fix it
         torch.cuda.empty_cache()
         X, cls = batch
         output = model.embedding(X)  # [32, 100]
-        # Gather the embeddings for each class
         for i in range(len(cls)):
             cls_idx = int(cls[i].cpu().numpy())
+            # Update class count
             cls_ct[cls_idx] += 1
+            # Update running embedding sum
             embedding = output[i]
             embeddings_for_cls[cls_idx] = (
                 embedding.detach() + embeddings_for_cls[cls_idx]
@@ -39,15 +40,16 @@ def generate_class_embeddings(model, traindataset, batch_size, device):
             del embedding
         del X, cls, output
 
-    # Now average the class embeddings
+    # Get mean embedding for each class
     class_avgs = {}
     for i in embeddings_for_cls:
         class_avgs[i] = embeddings_for_cls[i] / cls_ct[i]
 
     num_classes = max(class_avgs)
-    embeddings_arr = np.zeros((num_classes + 1, 100))
+    # Reference array - each row is the embedding for that class index
+    embeddings_arr = torch.zeros(num_classes + 1, 100).to(device)
     for i in class_avgs:
-        embeddings_arr[i] = class_avgs[i].cpu().detach().numpy()
+        embeddings_arr[i] = class_avgs[i]
 
     return embeddings_arr
 
@@ -68,12 +70,12 @@ def train_autoencoder(
         loss_at_step = []
         for _, batch in enumerate(tqdm.tqdm(loader)):
             X, cls = batch
-            embeddings = torch.from_numpy(class_embeddings[cls]).cuda().to(device)
+            embeddings = class_embeddings[cls]
             optimizer.zero_grad()
             # print(f"Image device: {X.get_device()}")
             # print(f"Embeddings device: {embeddings.get_device()}")
             output = model(X, embeddings)
-            # Loss is comparing generated image to actual image
+            # Loss compares generated image to actual image
             loss = criterion(output, X)
             loss_at_step.append(loss.item())
             loss.backward()
