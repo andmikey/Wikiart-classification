@@ -4,7 +4,7 @@
         "trainingdir": "/scratch/lt2326-2926-h24/wikiart/train",
         "testingdir": "/scratch/lt2326-2926-h24/wikiart/test",
         "device": "cuda:0",
-        "epochs": 25,
+        "epochs": 1,
         "batch_size": 64
     },
     "autoencoder": {
@@ -15,6 +15,16 @@
         "epochs": 100,
         "batch_size": 64,
         "embeddings_output_file": "images/embeddings.png",
+        "additional_outputs_dir": "images/"
+    },
+    "style_embeddings": {
+        "embedding_model": "models/wikiart.pth",
+        "trained_model": "models/wikiart_with_style_embeddings.pth",
+        "trainingdir": "/scratch/lt2326-2926-h24/wikiart/train",
+        "testingdir": "/scratch/lt2326-2926-h24/wikiart/test",
+        "device": "cpu",
+        "epochs": 1,
+        "batch_size": 64,
         "additional_outputs_dir": "images/"
     }
 }

@@ -191,7 +191,7 @@ class WikiArtAutoencoder(nn.Module):
         )  #  [batch_size, 3, 416, 416]
 
     def forward(self, image, style_embedding=None):
-        if self.use_embedding and style_embedding:
+        if self.use_embedding and style_embedding is not None:
             batch_size = image.shape[0]
             encoded = self.encoder(image)  # [batch_size, 1, 10, 10]
             flattened = encoded.view(batch_size, 100)  # [batch_size, 100]
