@@ -154,9 +154,6 @@ I ran this trained model on the test dataset to get the encoder's compressed rep
 
 ### Part 3 - Generation/style transfer 
 
-In this part, you're going to write another script that augments the autoencoder in part 2 to make a crude art generator conditioned on trained embeddings for the art styles.  That is, the model will take another input, that represents the art style alongside the input image.  Then you're going to test this with "mismatched" input artworks and style embeddings and see what the output looks like. (It won't be good, you need a much more elaborate network like a Generative Adversarial Network (GAN) and a lot of training to make this work.)  Report what you did in a concise manner alongside subjective impressions of the output (including if it's trivial, like it does nothing or it looks like noise).  
-
-
 To run this task, edit the "style_embeddings" config in [config.json](./config.json) (to e.g. reduce the number of epochs) and then run `encodings_with_style_embeddings.py`:
 ```sh
 python3 encodings_with_style_embeddings.py
@@ -170,11 +167,11 @@ We have already trained a model to classify art styles at the start of this assi
 
 After training the art style model, I run it again over all the items in the training set to find the mean embedding per class (`generate_class_embeddings` in `encodings_with_style_embeddings.py`). This becomes the representation of the art style which I pass to the autoencoder. 
 
-To integrate the art style into the autoencoder, I perform the following steps. Recall that the art style embedding is 1x100 and the output of the encoder is 1x10x10. I flatten the output of the encoder to 1x100 and concatenate it with the art style embedding to get a tensor of size 1x200. I then train a linear layer on this to reduce it to 1x100, and resize it to 1x10x10. This creates a new hidden layer which is then passed to the decoder. 
+To integrate the art style into the autoencoder, I perform the following steps. Recall that the art style embedding is 1x100 and the output of the encoder is 1x10x10. I flatten the output of the encoder to 1x100 and concatenate it with the art style embedding to get a tensor of size 1x200. I then apply a trained linear transformation on this to reduce its dimensionality to 1x100, and resize it to 1x10x10. This creates a new hidden layer which is then passed to the decoder. 
 
-Because of issues getting the implementation working on the GPU (see below), I didn't want to hog the CPU so I only trained the model for one epoch to check it worked. 
+Because of issues getting the implementation working on the GPU (see below), I could only run this model on the CPU. I didn't want to hog the CPU so close to the deadline for the final project so I only trained the model for 20 epochs to check it worked. 
 
-For the requested output, I sampled two images from the test set and looked at what happened if I ran the model on the image with the correct art style, and with a different art style. The output, as expected, is garbage, with no meaningful outputs:
+For the requested output, I sampled two images from the test set and looked at what happened if I ran the model on the image with the correct art style, and with a different art style. The output, as expected given I only trained for a small number of epochs, is not at all meaningful:
 
 ![](./images/style_experiments.png)
 
@@ -190,16 +187,27 @@ I fixed this by (1) ordering the outputs of os.walk before using them, and (2) a
 
 **Model training**. 
 
-In `generate_class_embeddings`, I ran into an OOM error when training on GPU. I tried everything I could think of (reducing batch size down to 1, deleting unused variables at the end of each step/batch, forcing CUDA to empty the cache, optimizing the code to minimize what needs to be held in memory) but it still crashed. In the end I suspected this was the culprit:
+In `generate_class_embeddings`, I got an out-of-memory error when training on the GPU. I tried everything I could think of (reducing batch size down to 1, deleting unused variables at the end of each step/batch, forcing CUDA to empty the cache, optimizing the code to minimize what needs to be held in memory) but it still crashed. In the end I suspected this was the culprit:
 
 ```py
 embeddings_for_cls[cls_idx] = embedding + embeddings_for_cls[cls_idx]
 ```
 
-and Torch was building a graph that meant all the tensors had to be held in memory for the final embeddings dictionary. I changed this to detach the tensor:
+I suspected Torch was building a graph that meant all the tensors had to be held in memory for the final embeddings dictionary. I changed this to detach the tensor, reasoning that removing it from the computing graph entirely would mean that Torch/Python could better manage the memory:
 
 ```py
 embeddings_for_cls[cls_idx] = embedding.detach() + embeddings_for_cls[cls_idx]
 ```
 
-but this meant the autoencoder ran out of memory later. 
+And this did stop the class embeddings step from running out of memory. However, I then ran into an error in the autoencoder training itself:
+
+```
+File "/home/gusandmich@GU.GU.SE/assignment_2/wikiart-classification/wikiart.py", line 206, in forward
+    linear = nn.Linear(200, 100)(concatted)  # [batch_size, 100]
+[...]
+RuntimeError: Expected all tensors to be on the same device, but found at least two devices, cpu and cuda:<number>! 
+```
+
+And this persisted even if I forced all the steps to be on the cuda device (with `.to(device)`), so the only way I could get the model to run is if it's run on CPU. The only other theory I had was that maybe the problem was to do with splitting the forward layer into two branches with the 'if' statement, or because I didn't wrap the embedding logic in an `nn.Sequential` (but I don't see how you'd do this, given there's a concatenation involved).
+
+I would love to hear ideas as to why this is happening! 
