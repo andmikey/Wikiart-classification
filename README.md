@@ -14,7 +14,7 @@ I made the following changes to the architecture and training:
 - Added two conv/dropout/relu layers.
 - Changed the size of the final Linear layer to 100 (this was necessary to complete my answer to part 3).
 
-I also fixed the bug in the original test.py code that caused the class indexes to be shuffled every time the dataset was reloaded (see "Class indexes" towards the bottom of this document). I think this probably had the biggest impact: without it, every time the test script was run, the class indexes changed at random, meaning even if the model *was* predicting classes correctly, they were not being matched to the right class index in the test data and therefore it was being evaluated as an incorrect prediction. Note that without this fix, the test script returns a different accuracy every time it is rerun. With the fix, the accuracy is the same every time (as we would expect). 
+I also fixed the bug in the original test.py code that caused the class indexes to be shuffled every time the dataset was reloaded (see "Class indexes" towards the bottom of this document). I think this probably had the biggest impact: without it, every time the test script was run, the class indexes changed at random, meaning even if the model *was* predicting classes correctly, they were not being matched to the right class index in the test data and therefore it was being evaluated as an incorrect prediction. **I think this is probably why the in-class example did not 'learn' anything meaningful**. Note that without this fix, the test script returns a different accuracy every time it is rerun. With the fix, the accuracy is the same every time (as we would expect). 
 
 With these changes the model achieved an accuracy of 0.115887850522995 i.e. 11%, so higher than the 5% requested. The training loss over time is below:
 
@@ -160,7 +160,7 @@ To run this task, edit the "style_embeddings" config in [config.json](./config.j
 python3 encodings_with_style_embeddings.py
 ```
 
-Note that this MUST be run on the CPU for reasons explained in [implementation chalenges](#implementation-challenges) below. 
+Note that this MUST be run on the CPU for reasons explained in [implementation challenges](#implementation-challenges) below. 
 
 #### Solution
 
@@ -170,11 +170,17 @@ After training the art style model, I run it again over all the items in the tra
 
 To integrate the art style into the autoencoder, I perform the following steps. Recall that the art style embedding is 1x100 and the output of the encoder is 1x10x10. I flatten the output of the encoder to 1x100 and concatenate it with the art style embedding to get a tensor of size 1x200. I then apply a trained linear transformation on this to reduce its dimensionality to 1x100, and resize it to 1x10x10. This creates a new hidden layer which is then passed to the decoder. 
 
-Because of issues getting the implementation working on the GPU (see below), I could only run this model on the CPU. I didn't want to hog the CPU so close to the deadline for the final project so I only trained the model for 20 epochs to check it worked. 
+Because of issues getting the implementation working on the GPU (see below), I could only run this model on the CPU. I didn't want to hog the CPU so close to the deadline for the final project so I only trained the model for 20 epochs to check it worked. The training loss is below:
+
+![](./images/embedding_training_loss_with_style.png)
 
 For the requested output, I sampled two images from the test set and looked at what happened if I ran the model on the image with the correct art style, and with a different art style. The output, as expected given I only trained for a small number of epochs, is not at all meaningful:
 
 ![](./images/style_experiments.png)
+
+I think if you wanted to improve the performance of this model you'd want to:
+1. Make the style embeddings more meaningful by improving the performance of the style classifier (e.g. trying a more complicated architecture). 
+2. Train for more epochs - judging from the training loss over time, 20 was too few, so I'd want to try closer to 100 (but running on the GPU, not the CPU!). 
 
 #### Implementation challenges
 
@@ -185,6 +191,8 @@ I realized while doing this task that the class indexes change between runs. Thi
 2. set() is used to store the classes rather than dict(), and sets do not preserve insertion order. 
 
 I fixed this by (1) ordering the outputs of os.walk before using them, and (2) altering the class save logic to use a dict() (Python 3.12.3 is the default Python version on the server, so the dictionary will preserve insertion order).
+
+This fix also meant I could correctly evaluate the performance of the model for Bonus A. 
 
 **Model training**. 
 
@@ -212,3 +220,7 @@ RuntimeError: Expected all tensors to be on the same device, but found at least 
 And this persisted even if I forced all the steps to be on the cuda device (with `.to(device)`), so the only way I could get the model to run is if it's run on CPU. The only other theory I had was that maybe the problem was to do with splitting the forward layer into two branches with the 'if' statement, or because I didn't wrap the embedding logic in an `nn.Sequential` (but I don't see how you'd do this, given there's a concatenation involved), but I don't know how to fix that if it's the case. 
 
 I would love to hear ideas as to why this is happening! 
+
+### Bonus B 
+
+I didn't have time for this because I spent so long trying to get Part 3 running on the GPU :( Maybe I'll have a go if I finish the final assignment writeup early (unlikely). 
