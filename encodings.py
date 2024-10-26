@@ -115,13 +115,12 @@ def main():
             traindataset,
             config["epochs"],
             config["batch_size"],
-            modelfile=config["modelfile"],
             device=device,
-            save_dir=Path(config["save_dir"]),
+            save_dir=Path(config["additional_outputs_dir"]),
         )
 
         if config["modelfile"]:
-            torch.save(model.state_dict(), model)
+            torch.save(model.state_dict(), config["modelfile"])
 
     # Plot embeddings
     # Load model from file if not traning

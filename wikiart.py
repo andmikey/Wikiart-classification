@@ -137,13 +137,13 @@ class WikiArtModel(nn.Module):
             nn.MaxPool2d((4, 4), padding=2),
             nn.Flatten(),
             nn.BatchNorm1d(103 * 103),
-            nn.Linear(103 * 103, 300),
+            nn.Linear(103 * 103, 100),
             nn.Dropout(0.01),
             nn.ReLU(),
         )
 
         self.output_classes = nn.Sequential(
-            nn.Linear(300, num_classes), nn.LogSoftmax(dim=1)
+            nn.Linear(100, num_classes), nn.LogSoftmax(dim=1)
         )
 
     def forward(self, image):
@@ -151,8 +151,9 @@ class WikiArtModel(nn.Module):
 
 
 class WikiArtAutoencoder(nn.Module):
-    def __init__(self):
+    def __init__(self, use_embedding=False):
         super().__init__()
+        self.use_embedding = use_embedding
         # Splitting into encoding/decoding like this means we can easily pull just the encoder once the model is trained
         self.encoder = nn.Sequential(
             nn.Conv2d(3, 3, kernel_size=5, stride=2),
@@ -188,5 +189,20 @@ class WikiArtAutoencoder(nn.Module):
             nn.BatchNorm2d(3),
         )  #  [batch_size, 3, 416, 416]
 
-    def forward(self, image):
+    def forward(self, image, style_embedding=None):
+        # if self.use_embedding and style_embedding:
+        #     # Hidden layer = concat end of encoder and image
+        #     encoded = self.encoder(image)
+        #     # Flatten the encoded layer to 100
+        #     flattened = encoded.view(image.shape[0], image.shape[1], 100)
+        #     # Concat the two layers
+        #     # Now has size 200
+        #     concatted = nn.Concatenate(axis=something)([flattened, encoded])
+        #     # Linear layer down to 100
+        #     linear = nn.Linear(200, 100)(concatted)
+        #     # Reshape to 10x10 and pass through the decoder
+        #     embedding_layer = linear.view(image.shape)
+
+        #     return self.decoder(embedding_layer)
+        # else:
         return self.decoder(self.encoder(image))

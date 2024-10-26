@@ -11,9 +11,9 @@
         "modelfile": "models/wikiart_autoencoder.pth",
         "trainingdir": "/scratch/lt2326-2926-h24/wikiart/train",
         "testingdir": "/scratch/lt2326-2926-h24/wikiart/test",
-        "device": "cuda:0",
-        "epochs": 1,
-        "batch_size": 32,
+        "device": "cuda:2",
+        "epochs": 100,
+        "batch_size": 64,
         "embeddings_output_file": "images/embeddings.png",
         "additional_outputs_dir": "images/"
     }
