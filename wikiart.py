@@ -2,6 +2,7 @@ import os
 import random
 from collections import defaultdict
 
+import torch
 import torch.nn as nn
 import torchvision.transforms.functional as F
 from torch.utils.data import Dataset
@@ -190,19 +191,20 @@ class WikiArtAutoencoder(nn.Module):
         )  #  [batch_size, 3, 416, 416]
 
     def forward(self, image, style_embedding=None):
-        # if self.use_embedding and style_embedding:
-        #     # Hidden layer = concat end of encoder and image
-        #     encoded = self.encoder(image)
-        #     # Flatten the encoded layer to 100
-        #     flattened = encoded.view(image.shape[0], image.shape[1], 100)
-        #     # Concat the two layers
-        #     # Now has size 200
-        #     concatted = nn.Concatenate(axis=something)([flattened, encoded])
-        #     # Linear layer down to 100
-        #     linear = nn.Linear(200, 100)(concatted)
-        #     # Reshape to 10x10 and pass through the decoder
-        #     embedding_layer = linear.view(image.shape)
+        if self.use_embedding and style_embedding:
+            batch_size = image.shape[0]
+            encoded = self.encoder(image)  # [batch_size, 1, 10, 10]
+            flattened = encoded.view(batch_size, 100)  # [batch_size, 100]
+            # Concat the two layers
+            concatted = torch.cat(
+                [flattened, style_embedding], axis=1
+            )  # [batch_size, 200]
+            linear = nn.Linear(200, 100)(concatted)  # [batch_size, 100]
+            # Reshape to 1x10x10 and pass through the decoder
+            embedding_layer = linear.view(
+                batch_size, 1, 10, 10
+            )  # [batch_size, 1, 10, 10]
 
-        #     return self.decoder(embedding_layer)
-        # else:
-        return self.decoder(self.encoder(image))
+            return self.decoder(embedding_layer)
+        else:
+            return self.decoder(self.encoder(image))
