@@ -118,7 +118,7 @@ def main():
     if args.train_model:
         print("Training a model")
         # Use trained model to get average class embeddings for images in training set
-        print("Generating style embeddings from test set")
+        print("Generating style embeddings from train set")
         style_model = WikiArtModel().to(device)
         style_model.load_state_dict(
             torch.load(
