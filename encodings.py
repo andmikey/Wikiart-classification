@@ -96,7 +96,6 @@ def main():
         "-c", "--config", help="configuration file", default="config.json"
     )
     parser.add_argument("-t", "--train-model", default=True)
-    parser.add_argument("-s", "--use-style-embeddings", default=False)
 
     args = parser.parse_args()
 
