@@ -18,7 +18,7 @@ I also fixed the bug in the original test.py code that caused the class indexes 
 
 With these changes the model achieved an accuracy of 0.115887850522995 i.e. 11%, so higher than the 5% requested. The training loss over time is below:
 
-![](./training_loss.png)
+![](./images/training_loss.png)
 
 
 ### Part 1 - Fix class imbalance
