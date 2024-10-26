@@ -48,9 +48,9 @@ def test(modelfile=None, device="cpu"):
     metric = metrics.MulticlassAccuracy()
     metric.update(predictions, truth)
     print("Accuracy: {}".format(metric.compute()))
-    # confusion = metrics.MulticlassConfusionMatrix(27)
-    # confusion.update(predictions, truth)
-    # print("Confusion Matrix\n{}".format(confusion.compute()))
+    confusion = metrics.MulticlassConfusionMatrix(27)
+    confusion.update(predictions, truth)
+    print("Confusion Matrix\n{}".format(confusion.compute()))
 
 
 test(modelfile=config["modelfile"], device=device)

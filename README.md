@@ -5,20 +5,21 @@ This repository details my solution for assignment 2 of LT2926 at the University
 I used the provided codebase as a starting point to (hopefully!) make it easier to follow for marking: https://github.com/asayeed/lt2326-h24-wa_modeling
 
 ## Assignment
-### Bonus A - Make the in-class example actually learn something (5 points)
+### Bonus A - Make the in-class example actually learn something
 
-Yes! We are actually starting with a bonus task! That is, you can skip this if you don't want to.  The in-class WikiArt demo did not actually learn the intended function.  As in, we got a maximum of 2% multiclass accuracy before convergence.  Update the model and architecture to see if you can get better performance.  If you get better than 5% accuracy, you can get the points on this task.  However, you are not allowed to use any pretrained models or transformers, just the basic PyTorch classes. You can copypaste your code from Assignment 1 too, it's OK!  Report on what you did and whether it worked.
+I made the following changes to the architecture and training:
+- Trained for 20 epochs.
+- Changed batch size to 64.
+- Decreased the learning rate to 0.001.
+- Added two conv/dropout/relu layers.
+- Changed the size of the final Linear layer to 100 (this was necessary to complete my answer to part 3).
 
-- Doing this on the *rebalanced* dataset 
+I also fixed the bug in the original test.py code that caused the class indexes to be shuffled every time the dataset was reloaded (see "Class indexes" towards the bottom of this document). I think this probably had the biggest impact: without it, every time the test script was run, the class indexes changed at random, meaning even if the model *was* predicting classes correctly, they were not being matched to the right class index in the test data and therefore it was being evaluated as an incorrect prediction. Note that without this fix, the test script returns a different accuracy every time it is rerun. With the fix, the accuracy is the same every time (as we would expect). 
 
-- Changed batch size to 64 and learning rate to 0.001, 20 epochs and I got accuracy: 0.08037383109331131
-- ... however, this changes run-by-run, it's not deterministic. Gives values anywhere in the range 2-6%. 
+With these changes the model achieved an accuracy of 0.115887850522995 i.e. 11%, so higher than the 5% requested. The training loss over time is below:
 
-Tried also adding two conv/dropout/relu layers
-and got Accuracy: 0.08411215245723724
-... but this also seemed to fluctuate around the 2-6% range when I tried running again! 
+![](./training_loss.png)
 
-Decided not to spend too much time on this since it's so similar to the first assignment
 
 ### Part 1 - Fix class imbalance
 
@@ -139,7 +140,7 @@ I defined the autoencoder as `WikiArtAutoencoder` in wikiart.py. I split it into
 - An encoder, which takes as input the image and uses progressive convolutional layers (followed by batch norm and dropout layers) to reduce the images from 3-channel 416x416 tensors to a 1-channel 10x10 tensor. **The 10x10 tensor output by the encoder is the model's compressed representation of the image.** 
 - A decoder, which is the mirror image of the encoder. 
 
-The autoencoder is trained in encodings.py. To track the training progress, I use the mean-squared error loss to compare how close the autoencoder's generated image is to the actual image.
+The autoencoder is trained in encodings.py. To track the training progress, I use the mean-squared error to compare how close the autoencoder's generated image is to the actual image.
 
 After training the encoder for 100 epochs, the mean loss per epoch plateaus, but is still fairly high: 
 
@@ -183,7 +184,7 @@ I realized while doing this task that the class indexes change between runs. Thi
 1. os.walk is used to iterate through the input directory, but os.walk doesn't preserve order; on each pass, the order in which a class is seen will change. 
 2. set() is used to store the classes rather than dict(), and sets do not preserve insertion order. 
 
-I fixed this by (1) ordering the outputs of os.walk before using them, and (2) altering the class save logic to use a dict() (Python 3.12.3 is installed on the server, so the dictionary will preserve insertion order).
+I fixed this by (1) ordering the outputs of os.walk before using them, and (2) altering the class save logic to use a dict() (Python 3.12.3 is the default Python version on the server, so the dictionary will preserve insertion order).
 
 **Model training**. 
 
@@ -208,6 +209,6 @@ File "/home/gusandmich@GU.GU.SE/assignment_2/wikiart-classification/wikiart.py",
 RuntimeError: Expected all tensors to be on the same device, but found at least two devices, cpu and cuda:<number>! 
 ```
 
-And this persisted even if I forced all the steps to be on the cuda device (with `.to(device)`), so the only way I could get the model to run is if it's run on CPU. The only other theory I had was that maybe the problem was to do with splitting the forward layer into two branches with the 'if' statement, or because I didn't wrap the embedding logic in an `nn.Sequential` (but I don't see how you'd do this, given there's a concatenation involved).
+And this persisted even if I forced all the steps to be on the cuda device (with `.to(device)`), so the only way I could get the model to run is if it's run on CPU. The only other theory I had was that maybe the problem was to do with splitting the forward layer into two branches with the 'if' statement, or because I didn't wrap the embedding logic in an `nn.Sequential` (but I don't see how you'd do this, given there's a concatenation involved), but I don't know how to fix that if it's the case. 
 
 I would love to hear ideas as to why this is happening! 
