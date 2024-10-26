@@ -25,7 +25,7 @@
         "testingdir": "/scratch/lt2326-2926-h24/wikiart/test",
         "device": "cpu",
         "epochs": 1,
-        "batch_size": 64,
+        "batch_size": 32,
         "additional_outputs_dir": "images/"
     }
 }

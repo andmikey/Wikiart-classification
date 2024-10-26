@@ -14,20 +14,24 @@ from torch.utils.data import DataLoader
 from wikiart import WikiArtAutoencoder, WikiArtDataset, WikiArtModel
 
 
-def generate_class_embeddings(model, traindataset, batch_size, device="cpu"):
+def generate_class_embeddings(model, traindataset, batch_size, device):
     train_loader = DataLoader(traindataset, batch_size=batch_size, shuffle=True)
 
     embeddings_for_cls = defaultdict(list)
 
     for _, batch in enumerate(train_loader):
+        # This bit gets OOM issues if run on GPU, works fine on CPU
+        # Haven't been able to fix it
+        torch.cuda.empty_cache()
         X, cls = batch
-        cls = cls.to(device)  # [32]
         output = model.embedding(X)  # [32, 100]
         # Gather the embeddings for each class
         for i in range(len(cls)):
             cls_idx = int(cls[i].cpu().numpy())
-            embedding = output[i].cpu()
+            embedding = output[i].to("cpu")
             embeddings_for_cls[cls_idx].append(embedding)
+        # An attempt at freeing memory (but doesn't seem to help)
+        del output
 
     # Now average the class embeddings
     class_avgs = {}
@@ -37,7 +41,7 @@ def generate_class_embeddings(model, traindataset, batch_size, device="cpu"):
     num_classes = max(class_avgs)
     embeddings_arr = torch.zeros(num_classes + 1, 100).to(device)
     for i in class_avgs:
-        embeddings_arr[i] = class_avgs[i]
+        embeddings_arr[i] = class_avgs[i].to(device)
 
     return embeddings_arr
 
@@ -58,8 +62,10 @@ def train_autoencoder(
         loss_at_step = []
         for _, batch in enumerate(tqdm.tqdm(loader)):
             X, cls = batch
-            embeddings = class_embeddings[cls]
+            embeddings = class_embeddings[cls].cuda().to(device)
             optimizer.zero_grad()
+            # print(f"Image device: {X.get_device()}")
+            # print(f"Embeddings device: {embeddings.get_device()}")
             output = model(X, embeddings)
             # Loss is comparing generated image to actual image
             loss = criterion(output, X)
@@ -90,7 +96,7 @@ def main():
     parser.add_argument(
         "-c", "--config", help="configuration file", default="config.json"
     )
-    parser.add_argument("-t", "--train-model", default=False)
+    parser.add_argument("-t", "--train-model", default=True)
 
     args = parser.parse_args()
 
@@ -106,19 +112,29 @@ def main():
     if args.train_model:
         print("Training a model")
         # Use trained model to get average class embeddings for images in training set
-        style_model = WikiArtModel().to(device)
+        print("Generating style embeddings from test set")
+        style_model = WikiArtModel().to("cpu")
         style_model.load_state_dict(
-            torch.load(config["embedding_model"], weights_only=True)
+            torch.load(
+                config["embedding_model"],
+                weights_only=True,
+                map_location=torch.device("cpu"),
+            )
         )
         style_model.eval()
         class_embeddings = generate_class_embeddings(
-            style_model, traindataset, config["batch_size"], device
+            style_model,
+            WikiArtDataset(trainingdir, "cpu"),
+            config["batch_size"],
+            device,
         )
         if config["class_embeddings"]:
             with open(config["class_embeddings"], "wb") as f:
                 pickle.dump(class_embeddings, f)
+
         # Now train autoencoder using the class style embeddings
-        autoencoder = train_autoencoder(
+        print("Training autoencoder with style embeddings")
+        model = train_autoencoder(
             traindataset,
             class_embeddings,
             config["epochs"],
@@ -128,7 +144,7 @@ def main():
         )
 
         if config["trained_model"]:
-            torch.save(autoencoder.state_dict(), config["trained_model"])
+            torch.save(model.state_dict(), config["trained_model"])
 
     else:
         print("Using existing weights")
