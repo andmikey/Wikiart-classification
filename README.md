@@ -1,6 +1,8 @@
 # WikiArt classification 
 
-Starting repository: https://github.com/asayeed/lt2326-h24-wa_modeling
+This repository details my solution for assignment 2 of LT2926 at the University of Gothenburg (Machine learning for statistical NLP: advanced), exploring autoencoders and image generation for Wikiart data.
+
+I used the provided codebase as a starting point to (hopefully!) make it easier to follow for marking: https://github.com/asayeed/lt2326-h24-wa_modeling
 
 ## Assignment
 ### Bonus A - Make the in-class example actually learn something (5 points)
@@ -13,22 +15,20 @@ Yes! We are actually starting with a bonus task! That is, you can skip this if y
 - ... however, this changes run-by-run, it's not deterministic. Gives values anywhere in the range 2-6%. 
 
 Tried also adding two conv/dropout/relu layers
+and got Accuracy: 0.08411215245723724
+... but this also seemed to fluctuate around the 2-6% range when I tried running again! 
 
-### Part 0 - Documentation (3 points)
+Decided not to spend too much time on this since it's so similar to the first assignment
 
-This isn't really a part, but we'll evaluate documentation quality, as a treat -- of course, you have to document to get any points at all, as we have to know what you did, but we'll also subjectively evaluate documentation quality on a scale like this:
+### Part 1 - Fix class imbalance
 
-0 - very difficult to figure out what you did
+I decided to solve this by a mixture of upsampling and downsampling to bring all the classes in the training set to around 400 samples each:
+- Where a class had too many samples, I randomly removed entries from the training data with a probability that meant we ended up with around 400 samples.
+- Where a class had too few samples, I duplicated entries until the class reached 400 items in size. 
 
-3 - easy to follow, understand, and concise while being descriptive
+The details of my approach are below:
 
-with 1 and 2 being somewhere in the middle.  This is, of course, a somewhat subjective rating, but it's to incentivize paying attention to how you report things.  It's only a handful of points.
-
-### Part 1 - Fix class imbalance (5 points)
-
-The data has very imbalanced classes which may lead to problematic performance.  From Bonus A, or from scratch as you like, train the model after finding a way to address the class imbalance and test the model for classification accuracy.  You can use any method you like to address the class imbalance.  Briefly document the method and the results in a Markdown report in the README of your repo or linked from the README.
-
-Class balances:
+First I checked how many entries we had for each class:
 
 ```sh
 $ find /scratch/lt2326-2926-h24/wikiart/train -type f | cut -d/ -f6 | sort | uniq -c | sort -nr
@@ -61,7 +61,7 @@ $ find /scratch/lt2326-2926-h24/wikiart/train -type f | cut -d/ -f6 | sort | uni
      15 Analytical_Cubism
 ```
 
-Now let's aim for 400 each in a resample:
+I wanted to aim for 400 in the resample, so I divided 400 by the number of samples in the class. Where the number is less than 0, that's our resample probability; where it's greater than zero, that's how many times we need to duplicate each entry. 
 
 ```sh
 $ find /scratch/lt2326-2926-h24/wikiart/train -type f | cut -d/ -f6 | sort | uniq -c | sort -nr | awk '{print 400/$1, $2}'
@@ -94,7 +94,8 @@ $ find /scratch/lt2326-2926-h24/wikiart/train -type f | cut -d/ -f6 | sort | uni
 26.6667 Analytical_Cubism
 ```
 
-Class balances after resampling:
+I used the numbers above to define a RESAMPLE_DICT in wikiart.py. With this dictionary, the new counts for each class are below. As you can see, this ends up at around 400 samples (give or take) for each class:
+
 ```sh
 393 Expressionism
 394 Ukiyo_e
@@ -125,33 +126,80 @@ Class balances after resampling:
 492 Mannerism_Late_Renaissance
 ```
 
-### Part 2 - Autoencode and cluster representations (13 points)
+### Part 2 - Autoencode and cluster representations
 
-We will do things other than classification in this task, so you should create a *different* training script and a new model class to allow for it (as in, a script separate from train.py and a new class in wikiart.py if you're using the in-class code as a base).
+To run this task, edit the "autoencoder" config in [config.json](./config.json) (to e.g. reduce the number of epochs) and then run `encodings.py`:
+```sh
+python3 encodings.py
+```
 
-- Using the standard PyTorch classes, develop an autoencoder that produces compressed representations of each image in the dataset. (Hint: the representations are going to be the activations of one of the model layers after training. Also consider what loss you might need to use.) Document and explain what you did concisely as well as how you measured the progress of the autoencoder.
-- Save and cluster the representations using clustering methods from scikit-learn. (You may have to convert the tensors back to numpy).  Using matplotlib, graph the clusters dimensionality-reduced to 2D (by PCA, t-SNE, SVD,or any other method), colour and/or shape-coded by their class.  The script will have to output an image, which you can add to your report.  Do art styles cluster well in your model? 
+N.b. you'll need to install seaborn, which is (surprisingly...) not installed in the mltgpu environment. You can do this with `pip install --user seaborn`.
 
-Document everything concisely.
+I defined the autoencoder as `WikiArtAutoencoder` in wikiart.py. I split it into two parts:
+- An encoder, which takes as input the image and uses progressive convolutional layers (followed by batch norm and dropout layers) to reduce the images from 3-channel 416x416 tensors to a 1-channel 10x10 tensor. **The 10x10 tensor output by the encoder is the model's compressed representation of the image.** 
+- A decoder, which is the mirror image of the encoder. 
 
-Need to install seaborn for this one. I did it with pip install --user. 
+The autoencoder is trained in encodings.py. To track the training progress, I use the mean-squared error loss to compare how close the autoencoder's generated image is to the actual image.
 
-### Part 3 - Generation/style transfer (9 points)
+After training the encoder for 100 epochs, the mean loss per epoch plateaus, but is still fairly high: 
+
+![](./images/embedding_model_training_loss.png)
+
+(I forgot to properly label the x-axis again here, sorry - it goes from 0 to 99, with each tick representing the mean training loss for the epoch.)
+
+I ran this trained model on the test dataset to get the encoder's compressed representation of each test image. I then flattened this representation (from 1x10x10 to 1x100) and ran PCA on it to plot the representations in 2D space. As you can see from the plot below, art styles do not cluster well in my model:
+
+![](./images/embeddings.png). 
+
+
+### Part 3 - Generation/style transfer 
 
 In this part, you're going to write another script that augments the autoencoder in part 2 to make a crude art generator conditioned on trained embeddings for the art styles.  That is, the model will take another input, that represents the art style alongside the input image.  Then you're going to test this with "mismatched" input artworks and style embeddings and see what the output looks like. (It won't be good, you need a much more elaborate network like a Generative Adversarial Network (GAN) and a lot of training to make this work.)  Report what you did in a concise manner alongside subjective impressions of the output (including if it's trivial, like it does nothing or it looks like noise).  
 
-- Pass art style *and* the input image
-- How do we get style embeddings?
-    - Train a style classifier on the (train) images. Take the last layer before the final output as the style embedding.
-- What do we do with style embeddings, once we have them?
-    - Could concat together in an intermediate layer
 
-- Use 300-size style embeddings from the wikiart model train
+To run this task, edit the "style_embeddings" config in [config.json](./config.json) (to e.g. reduce the number of epochs) and then run `encodings_with_style_embeddings.py`:
+```sh
+python3 encodings_with_style_embeddings.py
+```
 
-### Bonus B - Generation but with a pre-trained model (10 points)
+Note that this MUST be run on the CPU for reasons explained in [implementation chalenges](#implementation-challenges) below. 
 
-Write a script to fine-tune an existing pre-trained model from HuggingFace so that it generates art in the styles in the WikiArt dataset.  You can use LoRA to make it more compressed and efficient (the tools for LoRA should be installed on the mltgpu machines).  You might need mltgpu-2 for this, depending on how you implement it.  Document what you did in the report and subjective impressions of the generation quality.
+#### Solution
 
-- Instructions on fine-tuning a pretrained model: https://huggingface.co/docs/transformers/en/training
-- What kind of model to fine-tune?
-    - Text-to-image probably makes sense, prompt using the class: https://huggingface.co/models?pipeline_tag=text-to-image&sort=trending
+We have already trained a model to classify art styles at the start of this assignment. We can use the second-to-last layer of this model (before bringing the number of dimensions down to equal the number of classes) as a learned embedding for the art style. I altered the architecture slightly to make this output be 1x100 in size to make it easier to integrate into the autoencoder. 
+
+After training the art style model, I run it again over all the items in the training set to find the mean embedding per class (`generate_class_embeddings` in `encodings_with_style_embeddings.py`). This becomes the representation of the art style which I pass to the autoencoder. 
+
+To integrate the art style into the autoencoder, I perform the following steps. Recall that the art style embedding is 1x100 and the output of the encoder is 1x10x10. I flatten the output of the encoder to 1x100 and concatenate it with the art style embedding to get a tensor of size 1x200. I then train a linear layer on this to reduce it to 1x100, and resize it to 1x10x10. This creates a new hidden layer which is then passed to the decoder. 
+
+Because of issues getting the implementation working on the GPU (see below), I didn't want to hog the CPU so I only trained the model for one epoch to check it worked. 
+
+For the requested output, I sampled two images from the test set and looked at what happened if I ran the model on the image with the correct art style, and with a different art style. The output, as expected, is garbage, with no meaningful outputs:
+
+![](./images/style_experiments.png)
+
+#### Implementation challenges
+
+**Class indexes**.
+
+I realized while doing this task that the class indexes change between runs. This happens because:
+1. os.walk is used to iterate through the input directory, but os.walk doesn't preserve order; on each pass, the order in which a class is seen will change. 
+2. set() is used to store the classes rather than dict(), and sets do not preserve insertion order. 
+
+I fixed this by (1) ordering the outputs of os.walk before using them, and (2) altering the class save logic to use a dict() (Python 3.12.3 is installed on the server, so the dictionary will preserve insertion order).
+
+**Model training**. 
+
+In `generate_class_embeddings`, I ran into an OOM error when training on GPU. I tried everything I could think of (reducing batch size down to 1, deleting unused variables at the end of each step/batch, forcing CUDA to empty the cache, optimizing the code to minimize what needs to be held in memory) but it still crashed. In the end I suspected this was the culprit:
+
+```py
+embeddings_for_cls[cls_idx] = embedding + embeddings_for_cls[cls_idx]
+```
+
+and Torch was building a graph that meant all the tensors had to be held in memory for the final embeddings dictionary. I changed this to detach the tensor:
+
+```py
+embeddings_for_cls[cls_idx] = embedding.detach() + embeddings_for_cls[cls_idx]
+```
+
+but this meant the autoencoder ran out of memory later. 

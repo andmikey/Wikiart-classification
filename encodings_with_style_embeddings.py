@@ -4,6 +4,7 @@ import pickle
 from collections import defaultdict
 from pathlib import Path
 
+import numpy as np
 import torch
 import torch.nn as nn
 import tqdm
@@ -17,7 +18,8 @@ from wikiart import WikiArtAutoencoder, WikiArtDataset, WikiArtModel
 def generate_class_embeddings(model, traindataset, batch_size, device):
     train_loader = DataLoader(traindataset, batch_size=batch_size, shuffle=True)
 
-    embeddings_for_cls = defaultdict(list)
+    embeddings_for_cls = defaultdict(lambda: torch.zeros(100).to(device))
+    cls_ct = defaultdict(lambda: 0)
 
     for _, batch in enumerate(train_loader):
         # This bit gets OOM issues if run on GPU, works fine on CPU
@@ -28,20 +30,24 @@ def generate_class_embeddings(model, traindataset, batch_size, device):
         # Gather the embeddings for each class
         for i in range(len(cls)):
             cls_idx = int(cls[i].cpu().numpy())
-            embedding = output[i].to("cpu")
-            embeddings_for_cls[cls_idx].append(embedding)
-        # An attempt at freeing memory (but doesn't seem to help)
-        del output
+            cls_ct[cls_idx] += 1
+            embedding = output[i]
+            embeddings_for_cls[cls_idx] = (
+                embedding.detach() + embeddings_for_cls[cls_idx]
+            )
+
+            del embedding
+        del X, cls, output
 
     # Now average the class embeddings
     class_avgs = {}
     for i in embeddings_for_cls:
-        class_avgs[i] = torch.mean(torch.stack(embeddings_for_cls[i]), axis=0).detach()
+        class_avgs[i] = embeddings_for_cls[i] / cls_ct[i]
 
     num_classes = max(class_avgs)
-    embeddings_arr = torch.zeros(num_classes + 1, 100).to(device)
+    embeddings_arr = np.zeros((num_classes + 1, 100))
     for i in class_avgs:
-        embeddings_arr[i] = class_avgs[i].to(device)
+        embeddings_arr[i] = class_avgs[i].cpu().detach().numpy()
 
     return embeddings_arr
 
@@ -62,7 +68,7 @@ def train_autoencoder(
         loss_at_step = []
         for _, batch in enumerate(tqdm.tqdm(loader)):
             X, cls = batch
-            embeddings = class_embeddings[cls].cuda().to(device)
+            embeddings = torch.from_numpy(class_embeddings[cls]).cuda().to(device)
             optimizer.zero_grad()
             # print(f"Image device: {X.get_device()}")
             # print(f"Embeddings device: {embeddings.get_device()}")
@@ -113,18 +119,18 @@ def main():
         print("Training a model")
         # Use trained model to get average class embeddings for images in training set
         print("Generating style embeddings from test set")
-        style_model = WikiArtModel().to("cpu")
+        style_model = WikiArtModel().to(device)
         style_model.load_state_dict(
             torch.load(
                 config["embedding_model"],
                 weights_only=True,
-                map_location=torch.device("cpu"),
+                map_location=torch.device(device),
             )
         )
         style_model.eval()
         class_embeddings = generate_class_embeddings(
             style_model,
-            WikiArtDataset(trainingdir, "cpu"),
+            WikiArtDataset(trainingdir, device),
             config["batch_size"],
             device,
         )
