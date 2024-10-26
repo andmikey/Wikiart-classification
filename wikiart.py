@@ -68,7 +68,9 @@ class WikiArtDataset(Dataset):
         walking = os.walk(imgdir)
         filedict = {}
         indices = []
-        classes = set()
+        # Use a dictionary rather than a set to preserve insertion order and ensure
+        # class indexes are consistent between runs
+        classes = {}
         class_counts = defaultdict(lambda: 0)
 
         # Run through the files in alphabetical order to ensure consistency between runs (os.walk is random order
@@ -85,7 +87,7 @@ class WikiArtDataset(Dataset):
             for art in artfiles:
                 # Iterate over each file in the class folder
                 filedict[art] = WikiArtImage(imgdir, arttype, art)
-                classes.add(arttype)
+                classes[arttype] = 0
 
                 # Resample to adjust class probabilities
                 if resample_prob >= 1:

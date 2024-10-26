@@ -20,6 +20,7 @@
     "style_embeddings": {
         "embedding_model": "models/wikiart.pth",
         "trained_model": "models/wikiart_with_style_embeddings.pth",
+        "class_embeddings": "models/class_embeddings.pkl",
         "trainingdir": "/scratch/lt2326-2926-h24/wikiart/train",
         "testingdir": "/scratch/lt2326-2926-h24/wikiart/test",
         "device": "cpu",

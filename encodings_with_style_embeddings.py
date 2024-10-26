@@ -1,5 +1,6 @@
 import argparse
 import json
+import pickle
 from collections import defaultdict
 from pathlib import Path
 
@@ -89,6 +90,7 @@ def main():
     parser.add_argument(
         "-c", "--config", help="configuration file", default="config.json"
     )
+    parser.add_argument("-t", "--train-model", default=False)
 
     args = parser.parse_args()
 
@@ -101,29 +103,92 @@ def main():
     traindataset = WikiArtDataset(trainingdir, device)
     testdataset = WikiArtDataset(testingdir, device)
 
-    # Use trained model to get average class embeddings for images in training set
-    style_model = WikiArtModel().to(device)
-    style_model.load_state_dict(
-        torch.load(config["embedding_model"], weights_only=True)
+    if args.train_model:
+        print("Training a model")
+        # Use trained model to get average class embeddings for images in training set
+        style_model = WikiArtModel().to(device)
+        style_model.load_state_dict(
+            torch.load(config["embedding_model"], weights_only=True)
+        )
+        style_model.eval()
+        class_embeddings = generate_class_embeddings(
+            style_model, traindataset, config["batch_size"], device
+        )
+        if config["class_embeddings"]:
+            with open(config["class_embeddings"], "wb") as f:
+                pickle.dump(class_embeddings, f)
+        # Now train autoencoder using the class style embeddings
+        autoencoder = train_autoencoder(
+            traindataset,
+            class_embeddings,
+            config["epochs"],
+            config["batch_size"],
+            device=device,
+            save_dir=Path(config["additional_outputs_dir"]),
+        )
+
+        if config["trained_model"]:
+            torch.save(autoencoder.state_dict(), config["trained_model"])
+
+    else:
+        print("Using existing weights")
+        # Load pre-trained model
+        if config["trained_model"]:
+            model = WikiArtAutoencoder(use_embedding=True).to(device)
+            model.load_state_dict(
+                torch.load(config["trained_model"], weights_only=True)
+            )
+            model.eval()
+
+        # Load pre-trained class embeddings
+        with open(config["class_embeddings"], "rb") as f:
+            class_embeddings = pickle.load(f)
+
+    # Try generating some images
+    img1, lbl1 = testdataset[0]
+    img2, lbl2 = testdataset[300]
+    print(lbl1, testdataset.classes[lbl1], lbl2, testdataset.classes[lbl2])
+
+    img1_with_own_class = (
+        model(img1.unsqueeze(0), class_embeddings[lbl1].unsqueeze(0))[0]
+        .detach()
+        .permute((1, 2, 0))
     )
-    style_model.eval()
-    class_embeddings = generate_class_embeddings(
-        style_model, traindataset, config["batch_size"], device
-    )
-    # Now train autoencoder using the class style embeddings
-    autoencoder = train_autoencoder(
-        traindataset,
-        class_embeddings,
-        config["epochs"],
-        config["batch_size"],
-        device=device,
-        save_dir=Path(config["additional_outputs_dir"]),
+    img1_with_diff_class = (
+        model(img1.unsqueeze(0), class_embeddings[lbl1 + 1].unsqueeze(0))[0]
+        .detach()
+        .permute((1, 2, 0))
     )
 
-    if config["trained_model"]:
-        torch.save(autoencoder.state_dict(), config["trained_model"])
+    img2_with_own_class = (
+        model(img2.unsqueeze(0), class_embeddings[lbl2].unsqueeze(0))[0]
+        .detach()
+        .permute((1, 2, 0))
+    )
+    img2_with_diff_class = (
+        model(img2.unsqueeze(0), class_embeddings[lbl2 + 1].unsqueeze(0))[0]
+        .detach()
+        .permute((1, 2, 0))
+    )
 
-    # Try generating an image
+    # Print out the image w/ style embedding, image w/ style embedding of next class
+    fig, axs = plt.subplots(2, 3, figsize=(10, 10))
+
+    axs[0][0].set_title(f"Original image")
+    axs[0][0].imshow(img1.permute((1, 2, 0)) / 255)
+    axs[0][1].set_title(f"With {testdataset.classes[lbl1]} style")
+    axs[0][1].imshow(img1_with_own_class / 255)
+    axs[0][2].set_title(f"With {testdataset.classes[lbl1+1]} style")
+    axs[0][2].imshow(img1_with_diff_class / 255)
+
+    axs[1][0].set_title(f"Original image")
+    axs[1][0].imshow(img2.permute((1, 2, 0)) / 255)
+    axs[1][1].set_title(f"With {testdataset.classes[lbl2]} style")
+    axs[1][1].imshow(img2_with_own_class / 255)
+    axs[1][2].set_title(f"With {testdataset.classes[lbl2+1]} style")
+    axs[1][2].imshow(img2_with_diff_class / 255)
+
+    plt.savefig("images/style_experiments.png")
 
 
 if __name__ == "__main__":
