@@ -152,6 +152,7 @@ I ran this trained model on the test dataset to get the encoder's compressed rep
 
 ![](./images/embeddings.png). 
 
+(I realized later that I forgot to normalize the representation before passing it to PCA, so the graph above isn't very meaningful; maybe if I'd normalized it would show more sensible clusterings. I don't have time to fix the code, unfortunately!)
 
 ### Part 3 - Generation/style transfer 
 
