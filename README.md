@@ -4,6 +4,11 @@ This repository details my solution for assignment 2 of LT2926 at the University
 
 I used the provided codebase as a starting point to (hopefully!) make it easier to follow for marking: https://github.com/asayeed/lt2326-h24-wa_modeling
 
+I received a final mark of 31/30 in this assignment. I dropped marks on:
+
+- Documentation - I thought the marking scheme asked for high-quality written documentation (i.e. this readme) but it turns out they wanted high-quality codebase documentation.
+- Fixing the class imbalance - I forgot to evaluate the impact of fixing the class imbalance.
+
 ## Assignment
 ### Bonus A - Make the in-class example actually learn something
 
@@ -221,6 +226,12 @@ RuntimeError: Expected all tensors to be on the same device, but found at least 
 And this persisted even if I forced all the steps to be on the cuda device (with `.to(device)`), so the only way I could get the model to run is if it's run on CPU. The only other theory I had was that maybe the problem was to do with splitting the forward layer into two branches with the 'if' statement, or because I didn't wrap the embedding logic in an `nn.Sequential` (but I don't see how you'd do this, given there's a concatenation involved), but I don't know how to fix that if it's the case. 
 
 I would love to hear ideas as to why this is happening! 
+
+**Edit** I received the following feedback from the marker:
+
+> Regarding the GPU issues, I can see two possible issues. The issue with having tensors in CPU and in the GPU might be because dictionaries cannot live in the GPU and this could be the root of that issue.
+
+> But even if you managed to get around this, you were defining the class embeddings in a way that is self-recursive across epochs. This uses up *a lot* of memory and trying to fix it can lead to very weird errors. You’re not training the model at this point, so setting the model to evaluation mode will stop the backprop graph from generating and this will free up memory. This might solve your issue, but I’m not 100% sure what you’re going for. From your description, getting the embeddings for each image, saving them (detached and copied) somewhere with their class  and then averaging everything would be a good idea. Then you can make a matrix for a (possibly frozen) linear layer where the input would be a one-hot encoded vector for the styles and the output would be the embeddings themselves.
 
 ### Bonus B 
 
